@@ -7,7 +7,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  background: #0F172A;
+  background: #f7eded;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -18,26 +18,41 @@ body {
   cursor: pointer;
 }
 canvas { display: block; }
+#title {
+  margin-bottom: 4px;
+  font-size: 22px;
+  letter-spacing: 0.18em;
+  color: #790c5a;
+  font-weight: 500;
+}
+#subtitle {
+  margin-top: 6px;
+  margin-bottom: 16px;
+  font-size: 22px;
+  letter-spacing: 0.2em;
+  color: #f35588;
+}
 #label {
-  margin-top: 28px;
-  font-size: 18px;
-  letter-spacing: 0.1em;
-  color: #475569;
-  text-transform: uppercase;
+  margin-top: 24px;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: #f35588;
 }
 #hint {
-  margin-top: 14px;
-  font-size: 13px;
-  color: #334155;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #c9a0b8;
   letter-spacing: 0.05em;
 }
 </style>
 </head>
 <body>
 
+<div id="title">✦ 圆桌交流：妈妈喂养那些事 ✦</div>
+<div id="subtitle">分组讨论</div>
 <canvas id="c"></canvas>
 <div id="label">专注倒计时</div>
-<div id="hint">点击任意位置 开始 / 暂停 &nbsp;·&nbsp; 双击 重置</div>
+<div id="hint">点击开始 / 暂停 &nbsp;·&nbsp; 双击重置</div>
 
 <script>
 const canvas = document.getElementById('c');
@@ -52,7 +67,7 @@ let running = false;
 let finished = false;
 
 function resize() {
-  const size = Math.min(window.innerWidth, window.innerHeight) * 0.62;
+  const size = Math.min(window.innerWidth, window.innerHeight) * 0.58;
   canvas.width = size;
   canvas.height = size;
   draw(remaining);
@@ -66,36 +81,70 @@ function draw(rem) {
 
   ctx.clearRect(0, 0, W, W);
 
+  // 装饰小花点
+  const dots = 60;
+  for (let i = 0; i < dots; i++) {
+    const angle = (i / dots) * Math.PI * 2 - Math.PI / 2;
+    const dr = R + W * 0.072;
+    const dx = cx + Math.cos(angle) * dr;
+    const dy = cy + Math.sin(angle) * dr;
+    const dotR = i % 5 === 0 ? W * 0.012 : W * 0.005;
+    ctx.beginPath();
+    ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = i % 5 === 0 ? '#f35588' : '#e8b4c8';
+    ctx.fill();
+  }
+
+  // 背景轨道
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.strokeStyle = '#1E293B';
-  ctx.lineWidth = W * 0.045;
+  ctx.strokeStyle = '#f0cede';
+  ctx.lineWidth = W * 0.042;
   ctx.stroke();
 
+  // 进度弧
   if (progress > 0) {
     const startAngle = -Math.PI / 2;
     const endAngle = startAngle + Math.PI * 2 * progress;
     ctx.beginPath();
     ctx.arc(cx, cy, R, startAngle, endAngle);
-    ctx.strokeStyle = rem <= 60 ? '#E24B4A' : rem <= 5 * 60 ? '#EF9F27' : '#1D9E75';
-    ctx.lineWidth = W * 0.045;
+    ctx.strokeStyle = rem <= 60 ? '#790c5a' : '#f35588';
+    ctx.lineWidth = W * 0.042;
     ctx.lineCap = 'round';
     ctx.stroke();
+
+    // 进度点头
+    ctx.beginPath();
+    ctx.arc(
+      cx + Math.cos(endAngle) * R,
+      cy + Math.sin(endAngle) * R,
+      W * 0.028, 0, Math.PI * 2
+    );
+    ctx.fillStyle = rem <= 60 ? '#790c5a' : '#f35588';
+    ctx.fill();
   }
 
+  // 内圆背景
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - W * 0.06, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // 时间数字
   const mm = String(Math.floor(rem / 60)).padStart(2, '0');
   const ss = String(rem % 60).padStart(2, '0');
 
-  ctx.font = '500 ' + Math.floor(W * 0.19) + 'px monospace';
+  ctx.font = '500 ' + Math.floor(W * 0.2) + 'px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = rem <= 60 ? '#E24B4A' : '#F1F5F9';
+  ctx.fillStyle = rem <= 60 ? '#790c5a' : '#790c5a';
   ctx.fillText(mm + ':' + ss, cx, cy - W * 0.04);
 
-  ctx.font = '400 ' + Math.floor(W * 0.045) + 'px sans-serif';
-  ctx.fillStyle = running ? '#1D9E75' : rem === 0 ? '#E24B4A' : '#475569';
-  const stateText = rem === 0 ? '时间到！' : running ? '进行中' : pausedAt === TOTAL ? '点击开始' : '已暂停';
-  ctx.fillText(stateText, cx, cy + W * 0.14);
+  // 状态文字
+  ctx.font = '400 ' + Math.floor(W * 0.048) + 'px sans-serif';
+  ctx.fillStyle = running ? '#f35588' : rem === 0 ? '#790c5a' : '#c9a0b8';
+  const stateText = rem === 0 ? '时间到！' : running ? '进行中 ♡' : pausedAt === TOTAL ? '点击开始' : '已暂停';
+  ctx.fillText(stateText, cx, cy + W * 0.13);
 }
 
 function loop(ts) {
