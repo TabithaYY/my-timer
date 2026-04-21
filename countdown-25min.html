@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>25 分钟倒计时</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0F172A;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  user-select: none;
+  cursor: pointer;
+}
+canvas { display: block; }
+#label {
+  margin-top: 28px;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  color: #475569;
+  text-transform: uppercase;
+}
+#hint {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #334155;
+  letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="label">专注倒计时</div>
+<div id="hint">点击任意位置 开始 / 暂停 &nbsp;·&nbsp; 双击 重置</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const TOTAL = 25 * 60;
+
+let remaining = TOTAL;
+let pausedAt = TOTAL;
+let startTime = null;
+let rafId = null;
+let running = false;
+let finished = false;
+
+function resize() {
+  const size = Math.min(window.innerWidth, window.innerHeight) * 0.62;
+  canvas.width = size;
+  canvas.height = size;
+  draw(remaining);
+}
+
+function draw(rem) {
+  const W = canvas.width;
+  const cx = W / 2, cy = W / 2;
+  const R = W * 0.42;
+  const progress = rem / TOTAL;
+
+  ctx.clearRect(0, 0, W, W);
+
+  // 背景轨道
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1E293B';
+  ctx.lineWidth = W * 0.045;
+  ctx.stroke();
+
+  // 进度弧
+  if (progress > 0) {
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + Math.PI * 2 * progress;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, startAngle, endAngle);
+    ctx.strokeStyle = rem <= 60 ? '#E24B4A' : rem <= 5 * 60 ? '#EF9F27' : '#1D9E75';
+    ctx.lineWidth = W * 0.045;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  // 时间数字
+  const mm = String(Math.floor(rem / 60)).padStart(2, '0');
+  const ss = String(rem % 60).padStart(2, '0');
+  const timeStr = `${mm}:${ss}`;
+
+  ctx.font = `500 ${W * 0.19}px 'SF Mono', 'Courier New', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = rem === 0 ? '#E24B4A' : rem <= 60 ? '#E24B4A' : '#F1F5F9';
+  ctx.fillText(timeStr, cx, cy - W * 0.04);
+
+  // 状态文字
+  ctx.font = `400 ${W * 0.045}px sans-serif`;
+  ctx.fillStyle = running ? '#1D9E75' : rem === 0 ? '#E24B4A' : '#475569';
+  const stateText = rem === 0 ? '时间到！' : running ? '进行中' : pausedAt === TOTAL ? '点击开始' : '已暂停';
+  ctx.fillText(stateText, cx, cy + W * 0.14);
+}
+
+function loop(ts) {
+  if (!startTime) startTime = ts;
+  const elapsed = Math.floor((ts - startTime) / 1000);
+  remaining = Math.max(pausedAt - elapsed, 0);
+  draw(remaining);
+  if (remaining > 0 && running) {
+    rafId = requestAnimationFrame(loop);
+  } else if (remaining === 0 && running) {
+    running = false;
+    finished = true;
+    draw(0);
+  }
+}
+
+function toggle() {
+  if (finished) return;
+  if (running) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    draw(remaining);
+  } else {
+    running = true;
+    pausedAt = remaining;
+    startTime = null;
+    rafId = requestAnimationFrame(loop);
+  }
+}
+
+function reset() {
+  running = false;
+  finished = false;
+  cancelAnimationFrame(rafId);
+  remaining = TOTAL;
+  pausedAt = TOTAL;
+  startTime = null;
+  draw(remaining);
+}
+
+let lastClick = 0;
+body.addEventListener('click', () => {
+  const now = Date.now();
+  if (now - lastClick < 300) { reset(); lastClick = 0; return; }
+  lastClick = now;
+  setTimeout(() => { if (Date.now() - lastClick >= 280) toggle(); }, 280);
+});
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); toggle(); }
+  if (e.code === 'KeyR') reset();
+  if (e.code === 'F11') { e.preventDefault(); if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+});
+
+window.addEventListener('resize', resize);
+resize();
+
+const body = document.body;
+</script>
+</body>
+</html>
